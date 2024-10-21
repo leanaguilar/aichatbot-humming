@@ -1,18 +1,13 @@
 import os
-from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone
 from dotenv import load_dotenv
 from langchain.schema import Document
 from langchain.llms import HuggingFaceHub
 from langchain import PromptTemplate
-from langchain.schema.runnable import RunnablePassthrough
 from langchain.schema.output_parser import StrOutputParser
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain import hub
-import pprint
 
 load_dotenv()
 
@@ -180,7 +175,7 @@ class ChatBot:
         llm = HuggingFaceHub(
             repo_id=model_id,
             huggingfacehub_api_token=os.getenv('HUGGINGFACE_API_KEY'),
-            model_kwargs={"temperature": 0.7, "top_k": 50}
+            model_kwargs={"temperature": 0.7, "top_k": 50,"max_length": 4000,"max_new_tokens": 1024}
         )
 
         # Define a prompt template that expects both a question and context
@@ -188,7 +183,8 @@ class ChatBot:
             template="You are an expert on face yoga. Use the following context to answer the question.\n\n"
                      "Context: {context}\n"
                      "Question: {question}\n\n"
-                     "Answer concisely:",
+                     "Answer concisely without repeating the context:",
+
             input_variables=["context", "question"]
         )
 
@@ -210,20 +206,22 @@ class ChatBot:
         # Extract the result and clean up any unnecessary "Human" or "Assistant" prefixes
         answer = result["result"]
 
-        # Extract the text after "Answer concisely:"
-        marker = "Answer concisely:"
-        if marker in answer:
-            concise_answer = answer.split(marker)[1].strip()  # Get everything after "Answer concisely:"
-        else:
-            concise_answer = answer  # If "Answer concisely:" is not found, return the full answer
+        marker = "Answer concisely without repeating the context:"
 
-        # Return the concise answer
+        # Get only the part after the marker
+        if marker in answer:
+            concise_answer = answer.split(marker)[1].strip()  # Get everything after the marker
+        else:
+            concise_answer = answer.strip()  # If marker is not found, return the full answer
+
+        # Return the clean and concise answer
         return concise_answer
 
 
 chatbot = ChatBot()
 #print(chatbot.get_response_inference("you are an expert content writer. Your task is to create an 800-word article based on the following context. Please ensure the article has a clear introduction, body, and conclusion. Use the key points mentioned in the context to guide the structure, and feel free to elaborate on ideas to create a coherent narrative.can you create an article of 800 words with the content and context provided?"))
-#print(ChatBot.get_response_inference("where is savina atai from and where does face yoga come from?"))
+#print(ChatBot.get_response_inference("create a post for instagram explaining which changes suffer women during autumn. Make an intro and a conclusion"))
+print(ChatBot.get_response_inference("create a post for instagram about the Cycle of meridian flow. create an intro and a conclusion"))
 
 
 
